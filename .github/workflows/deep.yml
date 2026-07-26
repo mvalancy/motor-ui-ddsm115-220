@@ -1,0 +1,55 @@
+# Deep lane: dev -> main.
+#
+# Runs everything that can run without a motor attached. The nine tkinter GUI
+# test files are still excluded: they could not be verified before wiring this,
+# because python3-tk is not installable in the environment this was authored in.
+# They very likely need xvfb here. Add them once someone has actually watched
+# them pass — wiring an unverified job would just mean a red check on day one.
+#
+# The `hardware` marker is excluded by design and belongs on a bench runner,
+# not a hosted one. See docs/labs-and-runners.md in mvalancy/github-maintenance.
+name: deep
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: deep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  suite:
+    name: full suite (no hardware, no GUI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+
+      - name: Suite
+        run: |
+          python -m pytest tests -m "not hardware" --timeout=120 -q \
+            --ignore=tests/test_color_indicators.py \
+            --ignore=tests/test_gui_interactive.py \
+            --ignore=tests/test_gui.py \
+            --ignore=tests/test_shutdown.py \
+            --ignore=tests/test_slider_backgrounds.py \
+            --ignore=tests/test_slider_elements.py \
+            --ignore=tests/test_subtle_colors.py \
+            --ignore=tests/test_ttk_options.py \
+            --ignore=tests/test_ui_colors.py
+
+      - name: Report what was skipped
+        if: always()
+        run: python -m pytest tests -m "not hardware" --co -q 2>&1 | tail -5

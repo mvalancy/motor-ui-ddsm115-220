@@ -7,7 +7,7 @@ Version 1.0.0
 """
 
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox, simpledialog
+from tkinter import ttk, scrolledtext, messagebox
 import serial
 import serial.tools.list_ports
 import threading

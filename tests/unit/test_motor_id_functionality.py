@@ -194,16 +194,18 @@ class TestMotorIDIntegration:
         assert 'motor_controller.set_motor_id(' in content
     
     @pytest.mark.integration 
-    def test_gui_uses_simpledialog(self):
-        """Test that GUI imports and uses simpledialog"""
+    def test_gui_offers_motor_id_entry(self):
+        """The GUI must expose a way to pick a motor ID."""
         import os
         gui_file = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'ddsm115_gui.py')
-        
+
         with open(gui_file, 'r') as f:
             content = f.read()
-        
-        assert 'simpledialog' in content
-        assert 'askinteger' in content
+
+        # Motor ID selection moved from a modal simpledialog.askinteger prompt
+        # to an inline Spinbox bound to motor_id_var. Assert the current shape.
+        assert 'motor_id_var' in content
+        assert 'motor_id_spinbox' in content
     
     @pytest.mark.integration
     def test_complete_workflow_simulation(self, mock_motor_command_queue):

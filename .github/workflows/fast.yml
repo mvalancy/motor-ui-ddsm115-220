@@ -1,0 +1,56 @@
+# Fast lane: feature/* -> dev, and pushes to dev.
+#
+# Scope note. This repo drives real DDSM115/DDSM210 hardware over RS485 and
+# has a tkinter GUI, so three tiers exist and only one of them belongs on a
+# hosted runner:
+#
+#   -m hardware   needs a motor on a serial port. Never runs here.
+#   GUI tests     9 files import tkinter. Excluded for now — see deep.yml.
+#   everything else   pure logic; runs fine headless. That is what gates.
+name: fast
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: fast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: unit tests (no hardware)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-timeout
+
+      - name: Unit tests
+        # The --ignore list is not redundant with -m: pytest COLLECTS every file
+        # before markers deselect anything, so the tkinter imports would still
+        # blow up at collection time and fail the job before a single unit test
+        # ran. Keep this list in step with deep.yml.
+        run: |
+          python -m pytest tests -m "unit and not hardware" --timeout=60 -q \
+            --ignore=tests/test_color_indicators.py \
+            --ignore=tests/test_gui_interactive.py \
+            --ignore=tests/test_gui.py \
+            --ignore=tests/test_shutdown.py \
+            --ignore=tests/test_slider_backgrounds.py \
+            --ignore=tests/test_slider_elements.py \
+            --ignore=tests/test_subtle_colors.py \
+            --ignore=tests/test_ttk_options.py \
+            --ignore=tests/test_ui_colors.py
